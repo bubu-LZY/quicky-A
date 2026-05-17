@@ -1,685 +1,751 @@
-# Quicky小A 程序功能详细说明文档
+# Quicky小A 功能说明与FAQ文档
 <img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/e68aa792-3beb-44c7-8825-014bf1c6b58c" />
-
-> 程序版本：20260515-2157  
-> 生成日期：2026-05-16  
+> 程序版本：20260515-2157
+> 生成日期：2026-05-18
 > 程序用途：批量测试和分析大模型Prompt效果的质量分析工具
 
 ---
 
-## 一、系统登录与密码管理
+## 一、功能总览
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>登录与密码管理</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 保护系统安全，防止未授权访问<br>
-2. 支持首次设置密码、修改密码、密码验证<br>
-3. 具备防暴力破解机制（失败锁定）
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 首次访问时，系统会引导你设置密码（至少6位）<br>
-2. 设置完成后，每次访问都需要输入密码登录<br>
-3. 在设置页面可以修改密码<br>
-4. 本地访问（127.0.0.1）自动信任，不记录失败次数
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 密码忘记了怎么办？</strong><br>
-A: 删除数据目录下的 password/password_config.json 文件，重启程序后可重新设置。<br><br>
-<strong>Q: 输入密码多次错误被锁定了？</strong><br>
-A: 等待锁定时间结束自动解锁，或通过测试接口 /api/password/reset-lock 重置锁定状态。<br><br>
-<strong>Q: 为什么本地访问不需要验证失败次数？</strong><br>
-A: 本地访问（127.0.0.1/localhost）被系统信任，不会触发锁定机制，方便本地调试使用。
-</td>
-</tr>
-</table>
+| 序号 | 功能模块 | 简要说明 |
+|------|---------|---------|
+| 1 | 系统登录与密码管理 | 密码保护、防暴力破解、本地信任 |
+| 2 | 文件上传与解析 | 支持Excel/CSV，多编码容错，智能分隔符检测 |
+| 3 | 任务创建与管理 | 普通模式/MapReduce模式，多API提供商支持 |
+| 4 | 任务状态控制 | 暂停、恢复、停止运行中的任务 |
+| 5 | 结果查看与下载 | 多Sheet Excel导出，含统计、图表、明细 |
+| 6 | API模板管理 | 保存/复用 API 配置 |
+| 7 | Prompt模板管理 | 保存/复用 Prompt 模板，支持变量替换 |
+| 8 | 数据分析与统计 | 多维度枚举统计、交叉分析、条形图/饼图/柱图 |
+| 9 | 第二阶段深度分析 | 跑批完成后调用大模型生成分析报告 |
+| 10 | 双模型任务测试 | 同一批数据执行两次任务，对比结果 |
+| 11 | 时间计算与二次跑批 | 计算两时间字段差值，基于结果进行二次处理 |
+| 12 | Webhook通知 | 企业微信群机器人通知（HTTP/WebSocket） |
+| 13 | 定时任务 | 定时自动触发任务执行 |
+| 14 | 模板导入导出 | JSON格式配置迁移 |
+| 15 | 系统重置 | 清除任务数据与密码，保留模板 |
+| 16 | 网络监控与防睡眠 | 网络断开自动暂停，阻止系统睡眠 |
+| 17 | 桌面启动器与系统托盘 | 单实例检测，自动选端口，托盘图标 |
+| 18 | 日志管理 | 按大小轮转，自动清理过期日志 |
+| 19 | EasyQ集成 | 与EasyQ自动化平台联动 |
+| 20 | 存储信息查看 | 查看数据目录与各类文件存储位置 |
 
 ---
 
-## 二、文件上传与解析
+## 二、各功能详细说明
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>文件上传与解析</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 上传需要批量处理的数据文件（Excel或CSV）<br>
-2. 解析文件列名，用于后续字段映射<br>
-3. 智能检测文件每行平均字符数，辅助分批设置
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 点击上传按钮，选择 .xlsx、.xls 或 .csv 文件<br>
-2. 上传完成后，系统会自动解析文件列名<br>
-3. 可以使用"采样字符"功能，自动计算每条数据的平均字符数<br>
-4. 上传的文件会生成 file_token，供后续创建任务使用
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 支持哪些文件格式？</strong><br>
-A: 支持 Excel（.xlsx、.xls）和 CSV（.csv）格式。<br><br>
-<strong>Q: 文件大小有限制吗？</strong><br>
-A: 系统采用分块上传（1MB/块），理论上支持大文件，但建议单文件不超过100MB以保证性能。<br><br>
-<strong>Q: 上传失败怎么办？</strong><br>
-A: 检查文件格式是否正确，确保文件未被其他程序占用，然后重试。
-</td>
-</tr>
-</table>
+### 1. 系统登录与密码管理
+
+**功能介绍：**
+- 使用 PBKDF2-HMAC-SHA256 算法加密密码，迭代 100,000 次
+- 首次访问引导设置密码（至少6位）
+- 支持密码验证、修改密码
+- 防暴力破解：连续失败 5 次后锁定 5 分钟（300秒）
+- 本地访问（127.0.0.1/localhost）自动信任，不记录失败次数
+- 使用 `secrets.compare_digest` 防止时序攻击
+- 密码配置存储在持久化运行目录（RUNTIME_DIR/password/password_config.json）
+
+**相关代码位置：** `app/password_manager.py`
 
 ---
 
-## 三、任务创建与管理
+### 2. 文件上传与解析
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>任务创建与管理</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 创建批量处理任务，将数据发送给大模型处理<br>
-2. 支持多种API提供商（OpenAI、Bella Agent等）<br>
-3. 支持普通模式和MapReduce模式<br>
-4. 可暂停、恢复、停止正在运行的任务
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 上传数据文件后，填写Prompt模板<br>
-2. 选择API模板（包含API Key、模型等配置）<br>
-3. 选择运行模式：<br>
-   - 普通模式：逐条处理<br>
-   - MapReduce模式：分批处理，适合大数据量<br>
-4. 点击"开始任务"启动处理<br>
-5. 在任务列表中可以暂停/恢复/停止任务
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 任务卡住了怎么办？</strong><br>
-A: 可以点击"停止"按钮终止任务，然后重新创建。如果是网络问题，系统会自动暂停任务。<br><br>
-<strong>Q: MapReduce模式是什么？</strong><br>
-A: 将数据分成多批处理，每批包含多条记录，适合大数据量场景，可以提高处理效率。<br><br>
-<strong>Q: 如何选择合适的批大小？</strong><br>
-A: 系统提供智能分批功能，会根据每条数据的字符数自动计算合适的批大小。也可以手动设置。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 支持 `.xlsx`、`.xls`、`.csv` 三种格式
+- CSV 多编码容错：自动尝试 utf-8-sig、utf-8、gb18030、gbk、cp936、big5、utf-16 等编码
+- CSV 多分隔符检测：自动尝试逗号、制表符、分号、竖线等分隔符
+- 使用 `charset_normalizer` 自动检测文件编码
+- Excel 多引擎容错：依次尝试 calamine、openpyxl、xlrd 引擎
+- 通过乱码评分机制（`_dataframe_text_score`）选择最佳解析结果
+- 支持采样字符功能，计算每条数据平均字符数
+- 上传文件生成 `file_token`，供后续创建任务使用
+
+**相关代码位置：** `app/main.py` 第805-938行
 
 ---
 
-## 四、任务状态控制
+### 3. 任务创建与管理
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>任务状态控制</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 暂停正在运行的任务<br>
-2. 恢复已暂停的任务<br>
-3. 停止任务并终止处理
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 在任务列表中找到目标任务<br>
-2. 点击对应的操作按钮：<br>
-   - 暂停：临时停止处理，保留进度<br>
-   - 恢复：继续处理未完成的数据<br>
-   - 停止：永久终止任务
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 暂停后数据会丢失吗？</strong><br>
-A: 不会，暂停只是停止处理，已完成的数据会保留，可以随时恢复继续。<br><br>
-<strong>Q: 停止后还能恢复吗？</strong><br>
-A: 不能，停止是永久性操作，未处理的数据将不会被处理。如需继续，需要重新创建任务。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- **普通模式（normal）**：逐条处理，每条数据独立调用大模型
+- **MapReduce模式（mapreduce）**：分批处理，多条数据打包为一次请求
+- 支持三种 API 提供商：
+  - **OpenAI**：兼容 OpenAI Chat Completions API
+  - **Bella Agent**：Bella 智能体接口
+  - **Bella 工作流**：Bella 工作流接口
+- MapReduce 模式支持智能分批（auto）和手动分批（manual）
+- 智能分批默认从 100 条/批开始，失败后自动降级
+- Bella Agent MapReduce 模式至少需要 5 条记录，每批间隔至少 0.8 秒
+- 任务结束后统一对 error 记录重跑一次
+- 支持全局限速：可设置两次请求之间的最小间隔
+
+**相关代码位置：** `app/main.py` 第192-306行（Task模型）、第2918-3511行（MapReduce处理）
 
 ---
 
-## 五、结果查看与下载
+### 4. 任务状态控制
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>结果查看与下载</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 查看任务处理结果<br>
-2. 下载处理结果文件（Excel格式）<br>
-3. 查看任务日志和统计信息
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 在任务列表中点击"查看结果"<br>
-2. 可以在线浏览处理结果<br>
-3. 点击"下载"按钮导出Excel文件<br>
-4. 可以查看详细的处理日志
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 结果文件在哪里？</strong><br>
-A: 结果文件保存在数据目录的 results 文件夹中，也可以通过界面直接下载。<br><br>
-<strong>Q: 如何查看某条数据的处理详情？</strong><br>
-A: 在结果列表中点击具体记录，可以查看大模型的原始返回内容。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- **暂停（pause）**：临时停止处理，保留已完成进度，可恢复
+- **恢复（resume）**：继续处理未完成的数据
+- **停止（stop）**：永久终止任务，未处理的数据不会被处理
+- 使用 `asyncio.Event` 实现内存级暂停/停止信号，不频繁读磁盘
+- 暂停状态下 worker 协程以 0.3 秒间隔轮询等待
+- 网络断开时自动暂停所有正在运行的任务
+
+**相关代码位置：** `app/main.py` 第1675-1696行（暂停/停止检测逻辑）
 
 ---
 
-## 六、API模板管理
+### 5. 结果查看与下载
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>API模板管理</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 保存常用的API配置（API Key、模型、Base URL等）<br>
-2. 支持多种API提供商（OpenAI、Bella Agent、Bella工作流等）<br>
-3. 快速切换不同的API配置
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 点击"API模板"进入管理页面<br>
-2. 点击"新建模板"填写配置信息<br>
-3. 选择提供商类型（OpenAI/Bella Agent/Bella工作流）<br>
-4. 填写对应的认证信息和参数<br>
-5. 保存后可在创建任务时选择使用
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 支持哪些API提供商？</strong><br>
-A: 支持 OpenAI 兼容接口、Bella Agent、Bella 工作流三种类型。<br><br>
-<strong>Q: API Key安全吗？</strong><br>
-A: API Key保存在本地数据目录中，不会上传到任何服务器。建议定期更换Key以保证安全。<br><br>
-<strong>Q: 如何测试API配置是否正确？</strong><br>
-A: 可以创建一个测试任务，发送少量数据验证API连通性。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 下载文件为 Excel 格式（.xlsx），包含多个 Sheet：
+  - **Results**：原始数据 + 跑批结果（含解析出的字段列），带表格格式
+  - **数据统计**：多维度统计汇总 + 条形图/饼图/柱图（智能选型）
+  - **统计Markdown**：Markdown 格式统计文本，可复制后配合分析 Prompt 使用
+  - **数据分析**：第二阶段大模型分析结果（如有）
+  - **字段名_值**：每个枚举字段的明细 Sheet
+- 支持流式分页读取结果（`read_task_results_paged`），避免大文件全量加载
+- 结果文件以 JSONL 格式逐条追加写入，O(1) 开销
+- 支持双模型结果导出，任务一/任务二分别解析，中间插入分割列
+
+**相关代码位置：** `app/main.py` 第4081-4567行（`output_result_file_streaming`）
 
 ---
 
-## 七、Prompt模板管理
+### 6. API模板管理
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>Prompt模板管理</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 保存常用的Prompt模板<br>
-2. 支持变量替换（如 {{字段名}}）<br>
-3. 快速复用已有的Prompt配置
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 点击"Prompt模板"进入管理页面<br>
-2. 点击"新建模板"编写Prompt<br>
-3. 使用 {{字段名}} 语法引用数据列<br>
-4. 保存后可在创建任务时选择使用
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 如何在Prompt中引用数据字段？</strong><br>
-A: 使用双花括号语法，如 {{姓名}}、{{问题描述}}，系统会自动替换为对应的数据值。<br><br>
-<strong>Q: Prompt有长度限制吗？</strong><br>
-A: Prompt本身没有硬性限制，但需要考虑大模型的上下文窗口限制，建议控制在合理范围内。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 支持创建、编辑、删除 API 模板
+- 每个模板包含：提供商类型、API Key、Model、Base URL 等配置
+- 三种提供商类型：
+  - **OpenAI**：api_key、model、base_url
+  - **Bella Agent**：token、base_url、application_id、ucid、thread_id
+  - **Bella 工作流**：token、base_url、workflow_id、tenant_id、user_id
+- 模板以 JSON 文件存储在 `templates/api/` 目录
+- 支持 `response_format_json` 选项，声明 JSON 输出格式
+
+**相关代码位置：** `app/main.py` 第335-357行（ApiTemplate模型）
 
 ---
 
-## 八、数据分析与统计
+### 7. Prompt模板管理
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>数据分析与统计</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 对处理结果进行统计分析<br>
-2. 按维度（城市、类别、状态等）分组统计<br>
-3. 生成可视化分析报告<br>
-4. 支持二次深度分析
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 任务完成后，点击"统计分析"<br>
-2. 选择统计维度（如按城市、按状态等）<br>
-3. 系统自动计算各分组的数量和占比<br>
-4. 可触发"深度分析"让大模型生成分析报告
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 统计分析支持哪些维度？</strong><br>
-A: 支持数据中的任意枚举型字段作为统计维度，如城市、状态、类别等。<br><br>
-<strong>Q: 深度分析是什么？</strong><br>
-A: 深度分析会调用大模型，根据统计数据生成专业的分析报告，包含趋势分析、异常识别、优化建议等。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 支持创建、编辑、删除 Prompt 模板
+- 使用 `{{字段名}}` 语法引用数据列，系统自动替换为对应数据值
+- 模板以 JSON 文件存储在 `templates/prompts/` 目录
+- 分析阶段有独立的 Prompt 模板管理（`templates/analysis_prompts/`）
+- 内置一个通用分析 Prompt 模板：`通用分组质检分析（城市/类别/状态）`
+
+**相关代码位置：** `app/main.py` 第360-374行（PromptTemplate模型）、第393-454行（内置分析Prompt）
 
 ---
 
-## 九、双模型任务测试
+### 8. 数据分析与统计
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>双模型任务测试</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 使用相同的配置对同一批数据执行两次任务<br>
-2. 对比两次任务的处理结果<br>
-3. 用于验证任务结果的一致性和稳定性
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 创建任务时开启"双模型测试"选项<br>
-2. 配置API和Prompt（两次任务使用相同的配置）<br>
-3. 系统会执行两次相同的任务<br>
-4. 结果会分别保存，方便对比查看
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 双模型测试会消耗更多Token吗？</strong><br>
-A: 是的，每条数据会执行两次请求，Token消耗约为单次任务的2倍。<br><br>
-<strong>Q: 两次任务的配置可以不同吗？</strong><br>
-A: 目前两次任务使用相同的API和Prompt配置。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 自动识别枚举字段：唯一值数量在 2~50 之间的字段纳入统计
+- 跳过解释类字段：字段名包含"原因、分析、说明、建议、备注、描述"等关键词的不参与统计
+- 统计内容包括：
+  - 总体概况（总记录数、成功数、失败数、占比）
+  - 各枚举字段单维度分布（数量、占本字段%、占总量%）
+  - AI输出字段之间的交叉分析（数量 + 行占比）
+  - 原始输入字段分布
+  - 原始输入字段 × AI输出字段交叉分析
+  - 数值型字段统计（最小值、最大值、均值）
+  - 文本型字段样本值
+- 图表智能选型：2个值→饼图，3-5个值→柱图，>5个值→条形图
+- 支持"分析预统计字段"功能，可指定只对特定字段做统计
+
+**相关代码位置：** `app/main.py` 第4570-4759行（`_build_statistics_markdown`）
 
 ---
 
-## 十、时间计算与二次跑批
+### 9. 第二阶段深度分析
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>时间计算与二次跑批</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 计算两个时间字段之间的时间差<br>
-2. 基于计算结果进行二次处理<br>
-3. 用于需要时间维度分析的场景
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 在任务配置中开启"时间计算"功能<br>
-2. 选择原始时间字段和被减时间字段<br>
-3. 设置结果列名（默认"时间差(分钟)"）<br>
-4. 配置二次跑批的Prompt和模型<br>
-5. 第一次跑批完成后自动触发时间计算和二次处理
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 支持哪些时间格式？</strong><br>
-A: 支持常见的时间格式，如 "2024-01-01 12:00:00"、"2024/1/1 12:00" 等。<br><br>
-<strong>Q: 时间差的单位是什么？</strong><br>
-A: 默认单位是分钟，可以在配置中修改结果列名来表明单位。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 跑批完成后自动触发（如有分析 Prompt 且启用分析）
+- 将统计 Markdown + 分析 Prompt 发送给大模型
+- 分析阶段各配置项若为空，自动回退到跑批阶段对应配置
+- API Key 回退：分析阶段为空时使用跑批阶段保存的 `batch_api_key`
+- 支持 OpenAI、Bella Agent、Bella 工作流三种提供商
+- 分析结果保存在任务的 `analysis_result` 字段
+- 分析完成后自动推送企微通知（如配置了 Webhook）
+
+**相关代码位置：** `app/main.py` 第5051-5553行（`_run_analysis_stage`、`run_analysis_llm`）
 
 ---
 
-## 十一、Webhook通知
+### 10. 双模型任务测试
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>Webhook通知</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 任务完成时自动发送通知<br>
-2. 支持企业微信群机器人<br>
-3. 可配置多个Webhook地址
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 在"Webhook管理"中添加企业微信机器人地址<br>
-2. 创建任务时选择要通知的Webhook<br>
-3. 任务完成后自动发送包含统计信息的通知
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 如何获取企业微信Webhook地址？</strong><br>
-A: 在企业微信群中添加机器人，复制机器人的Webhook地址即可。<br><br>
-<strong>Q: 通知包含哪些信息？</strong><br>
-A: 通知包含任务名称、处理数量、成功率、耗时等关键统计信息。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 使用相同的配置对同一批数据执行两次任务
+- 两次任务独立运行，结果分别存储（`task1_analysis`、`task2_analysis`）
+- 下载时合并为一个 Excel，中间插入分割列
+- 生成"双模型统计汇总"Sheet，分别展示两个任务的统计
+- 支持在线预览两侧结果（`read_dual_model_preview_paged`）
+
+**相关代码位置：** `app/main.py` 第268-282行（双模型字段）、第3799-4077行（`output_dual_model_result_file_streaming`）
 
 ---
 
-## 十二、定时任务
+### 11. 时间计算与二次跑批
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>定时任务</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 定时自动触发任务执行<br>
-2. 支持周期性调度（每天、每周等）<br>
-3. 无人值守自动化处理
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 创建定时任务配置<br>
-2. 设置触发时间（Cron表达式或简单周期）<br>
-3. 关联要执行的任务模板<br>
-4. 启用定时任务后自动按计划执行
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 程序关闭后定时任务还会执行吗？</strong><br>
-A: 不会，定时任务依赖程序运行，程序关闭后定时任务会暂停。<br><br>
-<strong>Q: 如何查看定时任务的执行记录？</strong><br>
-A: 在定时任务管理页面可以查看每次执行的状态和结果。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 计算两个时间字段之间的时间差（分钟）
+- 支持 Excel 日期序列号和标准时间格式解析
+- 时间计算完成后自动触发二次跑批
+- 二次跑批使用 `analyze_rows_stream` 函数，高并发处理
+- 二次跑批结果单独导出为 Excel 文件
+- 无法计算时间差的记录标记为"不可计算"
+
+**相关代码位置：** `app/main.py` 第4766-5048行（`_run_time_calc_second_stage`）
 
 ---
 
-## 十三、日志管理
+### 12. Webhook通知
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>日志管理</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 记录系统运行日志<br>
-2. 便于问题排查和审计<br>
-3. 支持日志查看、下载、清空
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 在"系统日志"页面查看最近的日志<br>
-2. 可以下载完整的日志文件<br>
-3. 日志文件按大小自动轮转（单文件50MB，保留10个备份）
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 日志保存在哪里？</strong><br>
-A: 日志保存在数据目录的 logs 文件夹中，主日志文件名为 app.log。<br><br>
-<strong>Q: 日志会占用很多空间吗？</strong><br>
-A: 系统会自动轮转日志，最大占用约500MB（50MB × 10个备份）。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 支持企业微信群机器人 Webhook
+- 自动识别协议类型：HTTP POST 和 WebSocket
+- 通知内容包含：文件名、处理进度、Prompt/API模板名称、下载链接等
+- 支持 @ 提醒功能（通过系统UID配置）
+- 通知触发时机：任务完成、任务停止、分析完成、EasyQ异常
+- 使用新闻卡片（news）格式发送 HTTP 通知，Markdown 格式发送 WebSocket 通知
+
+**相关代码位置：** `app/main.py` 第6112-6400行（`send_wechat_webhook_notification`）
 
 ---
 
-## 十四、模板导入导出
+### 13. 定时任务
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>模板导入导出</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 导出所有配置模板为JSON文件<br>
-2. 从JSON文件导入模板配置<br>
-3. 便于在不同环境间迁移配置
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 点击"导出模板"下载JSON配置文件<br>
-2. 点击"导入模板"选择JSON文件上传<br>
-3. 系统会自动合并导入的模板（不覆盖已有的）
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 导入会覆盖现有模板吗？</strong><br>
-A: 不会，导入是增量操作，只添加不存在的模板。<br><br>
-<strong>Q: 可以只导出部分模板吗？</strong><br>
-A: 目前导出是全量导出，如需部分导出，可以手动编辑JSON文件。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 支持定时自动触发任务执行
+- 定时任务配置存储在 `templates/` 目录
+- 定时任务关联的文件来自 EasyQ 平台下载
+- 支持手动触发和自动触发两种模式
+- 定时任务信息记录在 Task 模型的 `scheduled_task_enabled`、`scheduled_task_id`、`scheduled_task_name` 字段
+
+**相关代码位置：** `app/main.py` 第239-242行（定时任务字段）
 
 ---
 
-## 十五、系统重置
+### 14. 模板导入导出
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>系统重置</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 清空所有历史任务数据<br>
-2. 重置密码配置<br>
-3. 保留API模板和Prompt模板配置<br>
-4. 用于系统初始化或空间清理
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 在系统设置中点击"重置系统"<br>
-2. 确认操作后，所有任务数据和密码配置将被删除<br>
-3. API模板和Prompt模板会保留<br>
-4. 仅允许本地访问（127.0.0.1）执行此操作
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 重置后数据还能恢复吗？</strong><br>
-A: 不能，重置是不可逆操作，请谨慎使用。<br><br>
-<strong>Q: 重置会删除什么？</strong><br>
-A: 会删除所有任务数据、结果文件、上传文件、日志文件（当前正在写的日志除外）以及密码配置。<br><br>
-<strong>Q: 重置会保留什么？</strong><br>
-A: 会保留API模板和Prompt模板配置。<br><br>
-<strong>Q: 远程访问能执行重置吗？</strong><br>
-A: 不能，系统重置仅允许本地访问（127.0.0.1/localhost）执行，这是安全限制。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 导出：将所有 API 模板和 Prompt 模板打包为 JSON 文件下载
+- 导入：从 JSON 文件导入模板配置
+- 导入是增量操作，只添加不存在的模板，不覆盖已有模板
+- 支持 EasyQ 模板导入导出
+
+**相关代码位置：** `app/main.py` 中的模板管理相关路由
 
 ---
 
-## 十六、网络监控与防睡眠
+### 15. 系统重置
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>网络监控与防睡眠</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 实时监控网络连通性<br>
-2. 网络断开时自动暂停任务<br>
-3. 防止系统进入睡眠状态影响任务执行
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 系统自动启用网络监控（每5秒检测一次）<br>
-2. 检测到网络断开会自动暂停正在运行的任务<br>
-3. 网络恢复后可以手动恢复任务<br>
-4. 程序运行时自动阻止系统睡眠
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 网络断开后任务数据会丢失吗？</strong><br>
-A: 不会，系统会自动暂停任务，已处理的数据会保留。<br><br>
-<strong>Q: 如何关闭防睡眠功能？</strong><br>
-A: 防睡眠功能在程序退出时自动关闭，不影响系统正常睡眠设置。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 清除内容：所有任务数据、结果文件、上传文件、日志文件（当前正在写的日志除外）、密码配置
+- 保留内容：API 模板和 Prompt 模板配置
+- 仅允许本地访问（127.0.0.1/localhost）执行此操作
+- 操作不可逆，需谨慎使用
 
+**相关代码位置：** `app/main.py` 中的系统重置路由
 
 ---
 
-## 十七、存储信息查看
+### 16. 网络监控与防睡眠
 
-<table>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold; width:150px;">功能名称</td>
-<td><strong>存储信息查看</strong></td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">功能用途</td>
-<td>
-1. 查看数据存储目录位置<br>
-2. 了解各类型文件的存储路径<br>
-3. 便于文件管理和备份
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">使用方法</td>
-<td>
-1. 在系统设置中点击"存储信息"<br>
-2. 查看各类数据的存储路径：<br>
-   - 任务目录：存储任务配置和结果<br>
-   - 日志目录：存储运行日志<br>
-   - 模板目录：存储API和Prompt模板
-</td>
-</tr>
-<tr>
-<td style="background-color:#f0f0f0; font-weight:bold;">常见问题</td>
-<td>
-<strong>Q: 可以修改存储目录吗？</strong><br>
-A: 可以通过设置环境变量 ANALYZER_DATA_DIR 来修改存储目录。<br><br>
-<strong>Q: 默认存储在哪里？</strong><br>
-A: 默认存储在 C:\QualityAnalyzerData 目录下。
-</td>
-</tr>
-</table>
+**功能介绍：**
+- 网络监控：每 5 秒检测一次网络连通性（连接 8.8.8.8:53）
+- 网络检测在后台线程池执行，不阻塞事件循环
+- 网络断开时自动暂停所有正在运行的任务，并弹出 Windows 消息框提醒
+- 网络恢复后记录日志，需手动恢复任务
+- 防睡眠：调用 Windows API `SetThreadExecutionState` 阻止系统进入睡眠
+- 防睡眠在程序退出时自动关闭
+
+**相关代码位置：** `app/main.py` 第45-106行（网络监控、防睡眠）
 
 ---
 
-## 附录：环境变量说明
+### 17. 桌面启动器与系统托盘
+
+**功能介绍：**
+- 单实例运行限制：通过绑定固定端口（59999）检测是否已有实例在运行
+- 自动寻找可用端口：从 5000 开始，最多尝试 30 个端口
+- 系统托盘图标：显示服务状态、本地地址、网络地址
+- 托盘菜单：打开网页/显示窗口、退出
+- 支持 Webview 窗口模式（如可用）和浏览器模式
+- 启动时自动打开浏览器访问本地地址
+
+**相关代码位置：** `run.py`
+
+---
+
+### 18. 日志管理
+
+**功能介绍：**
+- 全局日志文件：`logs/app.log`
+- 按大小轮转：单文件最大 50MB，保留 10 个备份（约 500MB 上限）
+- 任务日志：每个任务独立的 JSONL 日志文件（`{task_id}.log.jsonl`）
+- 每周自动清理超过 7 天的日志文件、结果 JSONL 文件
+- 支持从日志尾部反向读取，避免加载整个大文件
+
+**相关代码位置：** `app/main.py` 第488-597行（日志配置、清理）
+
+---
+
+### 19. EasyQ集成
+
+**功能介绍：**
+- 与 EasyQ 自动化操作平台集成
+- 支持从 EasyQ 触发页面直接触发任务执行
+- EasyQ 下载的文件自动关联到任务
+- 定时任务模式下自动从 EasyQ 获取待处理文件
+- EasyQ 查询异常时发送企微通知
+- EasyQ 平台地址：`https://easyq.ke.com/execute`
+
+**相关代码位置：** `app/main.py` 中的 EasyQ 相关字段和路由
+
+---
+
+### 20. 存储信息查看
+
+**功能介绍：**
+- 查看数据存储目录位置
+- 默认存储目录：`C:\QualityAnalyzerData`
+- 可通过环境变量 `ANALYZER_DATA_DIR` 修改
+- 目录结构：
+  - `tasks/`：任务配置和结果
+  - `results/`：输出文件
+  - `uploads/`：上传文件
+  - `logs/`：运行日志
+  - `templates/api/`：API模板
+  - `templates/prompts/`：Prompt模板
+  - `templates/analysis_prompts/`：分析Prompt模板
+  - `templates/stat_fields/`：统计字段模板
+  - `templates/time_field/`：时间字段模板
+  - `templates/webhooks/`：Webhook配置
+  - `password/`：密码配置
+
+**相关代码位置：** `app/main.py` 第118-150行（目录结构）
+
+---
+
+## 三、FAQ（常见问题解答）
+
+> 以下FAQ严格基于代码内容编写，不包含任何臆想内容。
+
+---
+
+### 密码与登录类
+
+**Q1: 密码是如何加密存储的？**
+
+A: 使用 PBKDF2-HMAC-SHA256 算法，迭代 100,000 次。每次设置密码时生成 16 字节的随机盐值（`secrets.token_hex(16)`），密码哈希和盐值一起存储在 `password_config.json` 文件中。验证密码时使用 `secrets.compare_digest` 比较哈希值，防止时序攻击。（代码位置：`app/password_manager.py` 第138-156行）
+
+---
+
+**Q2: 密码输错多少次会被锁定？锁定多久？**
+
+A: 连续输错 5 次后锁定 5 分钟（300秒）。锁定时间到达后自动解锁并重置失败计数。本地访问（127.0.0.1/localhost）不记录失败次数。（代码位置：`app/password_manager.py` 第260-270行）
+
+---
+
+**Q3: 密码忘记了怎么办？**
+
+A: 删除数据目录下的 `password/password_config.json` 文件，重启程序后可重新设置。数据目录默认为 `C:\QualityAnalyzerData\password\`。（代码位置：`app/password_manager.py` 第296-306行）
+
+---
+
+**Q4: 如何重置密码锁定状态？**
+
+A: 可以通过调用 `/api/password/reset-lock` 接口重置锁定状态，将失败次数清零、锁定时间清除。（代码位置：`app/password_manager.py` 第285-290行）
+
+---
+
+### 文件上传类
+
+**Q5: 支持哪些文件格式？**
+
+A: 支持 Excel（`.xlsx`、`.xls`）和 CSV（`.csv`）三种格式。其他格式会返回"仅支持 xlsx、xls、csv 文件"错误。（代码位置：`app/main.py` 第888-899行）
+
+---
+
+**Q6: CSV 文件编码不对导致乱码怎么办？**
+
+A: 系统会自动尝试多种编码：utf-8-sig、utf-8、gb18030、gbk、cp936、big5、utf-16、utf-16le、utf-16be，还会使用 `charset_normalizer` 自动检测。通过乱码评分机制（检测 `�`、`Ã`、`Â` 等乱码标记）选择最佳解析结果。latin-1 作为最后兜底编码。（代码位置：`app/main.py` 第805-857行）
+
+---
+
+**Q7: CSV 文件分隔符不是逗号能识别吗？**
+
+A: 能。系统会自动尝试多种分隔符：逗号、制表符（`\t`）、分号（`;`）、竖线（`|`），以及 Python 引擎的自动检测模式。（代码位置：`app/main.py` 第827行）
+
+---
+
+**Q8: Excel 文件打开失败怎么办？**
+
+A: 系统会依次尝试多个引擎：calamine、openpyxl、xlrd。如果所有引擎都失败，还会尝试将其作为 CSV 文件解析（兼容扩展名错误但内容实际为 CSV 的情况）。（代码位置：`app/main.py` 第860-885行）
+
+---
+
+### 任务运行类
+
+**Q9: 普通模式和 MapReduce 模式有什么区别？**
+
+A: 普通模式（normal）每条数据独立调用一次大模型 API；MapReduce 模式（mapreduce）将多条数据打包为一次请求发送，要求模型按顺序返回结果。MapReduce 模式适合大数据量，可显著减少请求次数。（代码位置：`app/main.py` 第226行 `batch_mode` 字段）
+
+---
+
+**Q10: MapReduce 模式的智能分批是怎么工作的？**
+
+A: 智能分批（auto）默认从 100 条/批开始。如果大模型返回"输入内容过多"类错误，会自动降级：先降到 20 条/批，连续失败 3 次后改为持续对半拆分，直到每批能成功处理。Bella Agent 模式下每批至少 5 条。（代码位置：`app/main.py` 第3144-3195行 `_run_adaptive_auto_batch`）
+
+---
+
+**Q11: 手动分批时大模型返回"输入内容过多"会怎样？**
+
+A: 任务会立即停止，标记 `input_too_long_manual = True`，前端会弹出提示让用户减少每批条数。（代码位置：`app/main.py` 第3200-3222行）
+
+---
+
+**Q12: 任务暂停后数据会丢失吗？**
+
+A: 不会。暂停只是停止处理，已完成的数据保存在 JSONL 结果文件中，可以随时恢复继续。（代码位置：`app/main.py` 第1692-1696行）
+
+---
+
+**Q13: 停止任务后还能恢复吗？**
+
+A: 不能。停止是永久性操作，未处理的数据将不会被处理。如需继续，需要重新创建任务。（代码位置：`app/main.py` 中 Task 模型的 `is_stopped` 字段）
+
+---
+
+**Q14: 网络断开后任务会怎样？**
+
+A: 系统每 5 秒检测网络连通性。检测到网络断开后，自动暂停所有正在运行的任务，设置 `error = "网络异常，任务已自动暂停"`，并弹出 Windows 消息框提醒。网络恢复后需手动恢复任务。（代码位置：`app/main.py` 第54-85行）
+
+---
+
+**Q15: 任务结束后失败的记录会重跑吗？**
+
+A: 会。MapReduce 模式任务结束后，系统会自动收集所有 error 记录，重新提交一次批次处理。重跑结果追加写入 JSONL 文件。（代码位置：`app/main.py` 第3377-3458行）
+
+---
+
+### API 配置类
+
+**Q16: 支持哪些 API 提供商？**
+
+A: 支持三种：
+1. **OpenAI**：兼容 OpenAI Chat Completions API（包括其他兼容接口）
+2. **Bella Agent**：Bella 智能体接口（`/bella/v1/agent/ask`）
+3. **Bella 工作流**：Bella 工作流接口（`/v1/workflow/run`）
+
+（代码位置：`app/main.py` 第1033-1055行 `normalize_provider`）
+
+---
+
+**Q17: Base URL 是如何处理的？**
+
+A: 系统会自动规范化 Base URL：去除首尾空白和引号，去除尾部斜杠。如果 URL 路径不以 `/v1` 结尾，会自动补齐 `/v1`。但如果路径已包含 `/v1` 或更深路径则保持不变。（代码位置：`app/main.py` 第955-969行 `normalize_base_url`）
+
+---
+
+**Q18: API Key 带有 "Bearer " 前缀会自动处理吗？**
+
+A: 会。`normalize_api_key` 函数会自动去除 `Bearer ` 前缀（不区分大小写）。（代码位置：`app/main.py` 第972-976行）
+
+---
+
+**Q19: 如何测试 API 配置是否正确？**
+
+A: 可以创建一个测试任务，上传少量数据（如 2-3 条），运行后查看结果来验证 API 连通性。
+
+---
+
+### 结果与统计类
+
+**Q20: 大模型返回的结果是如何解析为字段的？**
+
+A: 按优先级依次尝试三种策略：
+1. **JSON 解析**：直接 `json.loads`，展平为 `{key: value}`
+2. **片段提取**：用正则找到 JSON 块再解析
+3. **逐行解析**：匹配 `key: value` / `key：value` / `key=value` 格式
+
+嵌套 dict 只展开第一层，list 转 JSON 字符串。（代码位置：`app/main.py` 第3567-3660行 `_parse_analysis_fields`）
+
+---
+
+**Q21: 哪些字段不会参与统计？**
+
+A: 字段名包含以下关键词的不参与统计：原因、分析、解析、说明、参考、建议、备注、描述、判断说明、判断原因、判断理由、理由、解释、注释、详情、摘要、总结、概述、补充、附注、remark、note、reason、explain、description、detail、comment、analysis、summary、reference、suggestion。（代码位置：`app/main.py` 第4096-4111行）
+
+---
+
+**Q22: 枚举字段的筛选条件是什么？**
+
+A: 同时满足以下条件：
+1. 唯一值数量 ≥ 2 且 ≤ 50
+2. 不是解释类字段（不匹配跳过关键词）
+
+（代码位置：`app/main.py` 第4176-4179行）
+
+---
+
+**Q23: 生成的 Excel 包含哪些 Sheet？**
+
+A: 包含以下 Sheet：
+1. **Results**：原始数据 + 跑批结果，带表格格式
+2. **数据统计**：多维度统计汇总 + 图表
+3. **统计Markdown**：Markdown 格式统计文本
+4. **数据分析**：第二阶段大模型分析结果（如有）
+5. **字段名_值**：每个枚举字段的明细 Sheet（如有）
+
+（代码位置：`app/main.py` 第4081-4567行）
+
+---
+
+**Q24: 图表类型是如何选择的？**
+
+A: 智能选型：
+- 2 个值 → 饼图（pie）
+- 3-5 个值 → 柱图（column）
+- \>5 个值 → 条形图（bar）
+
+（代码位置：`app/main.py` 第5923-5958行）
+
+---
+
+**Q25: 交叉分析最多展示多少个字段对？**
+
+A: AI输出字段之间的交叉分析最多展示 10 个其他字段；原始输入字段 × AI输出字段交叉分析最多展示 8 个输入字段和 8 个输出字段。（代码位置：`app/main.py` 第4349行、第4428行）
+
+---
+
+### 第二阶段分析类
+
+**Q26: 第二阶段分析是什么？**
+
+A: 跑批完成后，系统自动收集统计数据生成 Markdown 报告，然后将报告 + 分析 Prompt 发送给大模型，生成深度分析报告。分析结果包含各维度的合格率、不合格率、整体结论等。（代码位置：`app/main.py` 第5051-5553行）
+
+---
+
+**Q27: 分析阶段的配置为空时会怎样？**
+
+A: 各配置项若为空，自动回退到跑批阶段对应配置。API Key 回退使用跑批阶段保存的 `batch_api_key`。（代码位置：`app/main.py` 第5485-5490行）
+
+---
+
+### 双模型类
+
+**Q28: 双模型任务的两次任务配置可以不同吗？**
+
+A: 暂不支持。默认与第一次任务（任务一）相同。
+
+---
+
+### 时间计算类
+
+**Q29: 时间计算支持哪些时间格式？**
+
+A: 支持 Excel 日期序列号和标准时间格式（通过 `pd.to_datetime` 解析）。Excel 序列号会自动转换为日期时间。（代码位置：`app/main.py` 第4808-4836行 `parse_col_quick`）
+
+---
+
+**Q30: 时间差的单位是什么？**
+
+A: 默认单位是分钟。计算公式为：`abs(原始时间 - 被减时间) / 60`，结果保留 2 位小数。无法计算的记录标记为"不可计算"。（代码位置：`app/main.py` 第4870-4878行）
+
+---
+
+### Webhook 类
+
+**Q31: 企微 Webhook 支持哪些协议？**
+
+A: 支持两种协议：
+1. **HTTP POST**：URL 形如 `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx`
+2. **WebSocket**：URL 形如 `wss://...`
+
+系统自动识别 URL 前缀选择协议。（代码位置：`app/main.py` 第6262行）
+
+---
+
+**Q32: 通知包含哪些信息？**
+
+A: 包含：文件名、完成文件名、定时任务名称（如有）、任务类型（如有）、Prompt模板名称、API模板名称、处理进度（成功数/总数）、下载链接、分析下载链接（如有）、二次跑批下载链接（如有）。（代码位置：`app/main.py` 第6193-6214行）
+
+---
+
+### 性能与并发类
+
+**Q33: 系统的并发控制是怎样的？**
+
+A: 使用 `AdaptiveSemaphore`（自适应信号量）动态调整并发数。根据最近 20 条请求的错误率和平均延迟自动调整：
+- 严重限流（429/限流，错误率≥20%）：降到 65%
+- 轻度限流（错误率≥8%）：降到 82%
+- 零错低延迟：激进爬升 +60%
+- 低错低延迟：稳健爬升 +35%
+
+（代码位置：`app/main.py` 第1372-1421行、第1881-1923行）
+
+---
+
+**Q34: Bella Agent 的并发限制是多少？**
+
+**-mapreduce模式**
+
+A: 默认最大并发数通过环境变量 `BELLA_MAX_CONCURRENCY` 控制，默认 50，最大 500。（代码位置：`app/main.py` 第1433行）
+
+---
+
+**Q35: OpenAI 接口的并发限制是多少？**
+
+A: 默认最大并发数通过环境变量 `OPENAI_MAX_CONCURRENCY` 控制，默认 200，最大 1000。（代码位置：`app/main.py` 第1438行）
+
+---
+
+**Q36: 系统会自动防止电脑睡眠吗？**
+
+A: 会。程序运行时调用 Windows API `SetThreadExecutionState(0x80000001)` 阻止系统进入睡眠。程序退出时自动恢复正常睡眠机制。（代码位置：`app/main.py` 第90-106行、`run.py` 第73-105行）
+
+---
+
+### 日志与清理类
+
+**Q37: 日志文件保存在哪里？**
+
+A: 保存在数据目录的 `logs` 文件夹中，主日志文件名为 `app.log`。每个任务还有独立的日志文件 `{task_id}.log.jsonl`。（代码位置：`app/main.py` 第141-142行）
+
+---
+
+**Q38: 日志会占用很多空间吗？**
+
+A: 系统会自动轮转日志，单文件最大 50MB，保留 10 个备份（约 500MB 上限）。每周自动清理超过 7 天的日志文件、结果 JSONL 文件。（代码位置：`app/main.py` 第493-597行）
+
+---
+
+**Q39: 如何修改数据存储目录？**
+
+A: 设置环境变量 `ANALYZER_DATA_DIR` 为自定义路径。系统会依次尝试：环境变量路径 → `C:/QualityAnalyzerData` → `C:/Users/Public/QualityAnalyzerData` → 程序目录下的 `runtime` 文件夹。（代码位置：`app/main.py` 第118-133行）
+
+---
+
+### 系统重置类
+
+**Q40: 系统重置会删除什么？保留什么？**
+
+A: 删除：所有任务数据、结果文件、上传文件、日志文件（当前正在写的日志除外）、密码配置。
+保留：API 模板和 Prompt 模板配置。
+仅允许本地访问（127.0.0.1/localhost）执行此操作。（代码位置：`app/main.py` 中系统重置路由）
+
+---
+
+### EasyQ 集成类
+
+**Q41: EasyQ 是什么？**
+
+A: EasyQ 是一个自动化操作平台，支持 Web 端和移动端 App 的自动化操作，可固化 Web 端的操作流程。适用场景：核心场景回归/巡检、运营流程自动化。平台地址：`https://easyq.ke.com/execute`。
+
+---
+
+### 其他类
+
+**Q42: 程序默认运行端口是多少？**
+
+A: 默认端口 5000。如果 5000 被占用，会自动尝试 5001-5029 范围内的端口。（代码位置：`run.py` 第140-146行）
+
+---
+
+**Q43: 如何防止程序重复启动？**
+
+A: 通过绑定固定端口（59999）实现单实例检测。如果端口已被绑定，说明已有实例在运行，会弹出提示并退出。（代码位置：`run.py` 第38-49行）
+
+---
+
+**Q44: 系统托盘图标显示哪些信息？**
+
+A: 显示：程序名称、服务状态、本地访问地址（`http://127.0.0.1:端口`）、网络访问地址（`http://本机IP:端口`）。（代码位置：`run.py` 第222-228行）
+
+---
+
+**Q45: 支持代理/证书环境吗？**
+
+A: 默认启用 `trust_env`，读取系统代理/证书环境变量。如需强制直连，可设置环境变量 `OPENAI_TRUST_ENV=0`。（代码位置：`app/main.py` 第979-988行）
+
+---
+
+**Q46: Bella Agent 的错误重试策略是什么？**
+
+A: 最多重试 6 次。重试条件：HTTP 状态码 408/425/429/500/502/503/504，或超时/传输错误。退避策略：`min(30.0, 0.8 * (attempt+1)^2 + random)` 秒。永久性错误（如 403 权限错误、缺少 bellaToken）不重试。（代码位置：`app/main.py` 第1514-1611行）
+
+---
+
+**Q47: OpenAI 接口的错误重试策略是什么？**
+
+A: 单行请求最多重试 1 次。MapReduce 批次请求最多重试 1 次，失败后降级逐条重试。退避间隔 0.5-1 秒。（代码位置：`app/main.py` 第1944-2020行、第2847-2915行）
+
+---
+
+**Q48: 文件字段值中的标点符号会自动处理吗？**
+
+A: 会。对枚举类短值（长度≤20字符）自动去除首尾多余标点。同时规范化字段值中的空格：将多个连续空格压缩为单个半角空格，去除中文字符与数字之间的空格（如"没按照 30 分钟关单"→"没按照30分钟关单"）。（代码位置：`app/main.py` 第3513-3564行）
+
+---
+
+**Q49: 结果文件中 analysis_result 字段什么时候有值？**
+
+A: 当大模型返回的结果无法解析为 JSON 键值对时，原始返回文本会放在 `analysis_result` 字段。如果成功解析为键值对，`analysis_result` 为空，各字段值分别放在对应的列中。（代码位置：`app/main.py` 第3698-3716行）
+
+---
+
+**Q50: Bella 工作流支持哪些传递模式？**
+
+A: 支持三种模式：
+1. **fields**（默认）：逐个字段传递，将数据行的每个字段作为独立的 inputs 参数
+2. **object**：完整对象传递，将整个数据行作为 `inputs_data` 参数
+3. **json**：JSON 格式传递
+
+（代码位置：`app/main.py` 第213行 `bella_workflow_pass_mode` 字段）
+
+---
+
+## 四、环境变量说明
 
 | 环境变量 | 说明 | 默认值 |
 |---------|------|--------|
-| ANALYZER_DATA_DIR | 数据存储目录 | C:\QualityAnalyzerData |
+| `ANALYZER_DATA_DIR` | 数据存储目录 | `C:\QualityAnalyzerData` |
+| `OPENAI_TRUST_ENV` | 是否读取系统代理/证书 | `1`（启用） |
+| `OPENAI_MAX_CONCURRENCY` | OpenAI 最大并发数 | 200 |
+| `BELLA_MAX_CONCURRENCY` | Bella Agent 最大并发数 | 50 |
+| `BELLA_WORKFLOW_MAX_CONCURRENCY` | Bella 工作流最大并发数 | 30 |
 
 ---
 
-## 附录：默认端口
+## 五、目录结构说明
 
-程序默认运行端口：**5000**（如果5000被占用，会自动尝试5001-5029）
-
-访问地址：http://localhost:5000
+```
+QualityAnalyzerData/
+├── tasks/              # 任务配置和结果（.json、.jsonl）
+├── results/            # 输出文件（.xlsx）
+├── uploads/            # 上传文件
+├── logs/               # 运行日志（app.log、*.log.jsonl）
+├── templates/
+│   ├── api/            # API 模板
+│   ├── prompts/        # Prompt 模板
+│   ├── analysis_prompts/ # 分析 Prompt 模板
+│   ├── stat_fields/    # 统计字段模板
+│   ├── standalone_stat_prompts/ # 独立统计 Prompt 模板
+│   ├── time_field/     # 时间字段模板
+│   └── webhooks/       # Webhook 配置
+└── password/           # 密码配置
+```
 
 ---
 
-## 附录：支持的API提供商
-
-| 提供商类型 | 说明 | 相关参数 |
-|-----------|------|---------|
-| OpenAI | OpenAI兼容接口 | API Key、Model、Base URL |
-| Bella Agent | Bella智能体 | Token、Base URL、Application ID、UCID、Thread ID |
-| Bella 工作流 | Bella工作流 | Token、Base URL、Workflow ID、Tenant ID、User ID |
-
----
-
-*文档生成完成，如有疑问请联系系统管理员*
+*文档生成完成，所有内容严格基于代码编写*
