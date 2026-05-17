@@ -1,5 +1,6 @@
 # Quicky小A 功能说明与FAQ文档
 <img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/e68aa792-3beb-44c7-8825-014bf1c6b58c" />
+
 > 程序版本：20260515-2157
 > 生成日期：2026-05-18
 > 程序用途：批量测试和分析大模型Prompt效果的质量分析工具
